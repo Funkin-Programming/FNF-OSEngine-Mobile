@@ -11,7 +11,6 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.display.StageScaleMode;
 
-//crash handler stuff
 #if CRASH_HANDLER
 import lime.app.Application;
 import openfl.events.UncaughtErrorEvent;
@@ -23,20 +22,23 @@ import sys.io.File;
 import sys.io.Process;
 #end
 
+#if android
+import android.content.Context;
+import android.os.Environment;
+#end
+
 using StringTools;
 
 class Main extends Sprite
 {
-	var gameWidth:Int = 1280; // Width of the game in pixels (might be less / more in actual pixels depending on your zoom).
-	var gameHeight:Int = 720; // Height of the game in pixels (might be less / more in actual pixels depending on your zoom).
-	var initialState:Class<FlxState> = TitleState; // The FlxState the game starts with.
-	var zoom:Float = -1; // If -1, zoom is automatically calculated to fit the window dimensions.
-	var framerate:Int = 60; // How many frames per second the game should run at.
-	var skipSplash:Bool = true; // Whether to skip the flixel splash screen that appears in release mode.
-	var startFullscreen:Bool = false; // Whether to start the game in fullscreen on desktop targets
+	var gameWidth:Int = 1280;
+	var gameHeight:Int = 720;
+	var initialState:Class<FlxState> = TitleState;
+	var zoom:Float = -1;
+	var framerate:Int = 60;
+	var skipSplash:Bool = true;
+	var startFullscreen:Bool = false;
 	public static var fpsVar:FPS;
-
-	// You can pretty much ignore everything from here on - your code should go in your states.
 
 	public static function main():Void
 	{
@@ -81,18 +83,30 @@ class Main extends Sprite
 			gameHeight = Math.ceil(stageHeight / zoom);
 		}
 	
+		#if android
+		var storagePath:String = Environment.getExternalStorageDirectory() + "/.OSEngine/";
+		if (!FileSystem.exists(storagePath))
+			FileSystem.createDirectory(storagePath);
+		
+		if (!FileSystem.exists(storagePath + "assets/"))
+			FileSystem.createDirectory(storagePath + "assets/");
+			
+		if (!FileSystem.exists(storagePath + "mods/"))
+			FileSystem.createDirectory(storagePath + "mods/");
+		#end
+
 		ClientPrefs.loadDefaultKeys();
 		addChild(new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen));
 
-		#if !mobile
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
 		addChild(fpsVar);
 		Lib.current.stage.align = "tl";
 		Lib.current.stage.scaleMode = StageScaleMode.NO_SCALE;
+		
 		if(fpsVar != null) {
 			fpsVar.visible = ClientPrefs.showFPS;
 		}
-		#end
+
 		FlxG.autoPause = false;
 
 		#if html5
@@ -104,11 +118,6 @@ class Main extends Sprite
 		#end
 	}
 
-	// Code was entirely made by sqirra-rng for their fnf engine named "Izzy Engine", big props to them!!!
-	// very cool person for real they don't get enough credit for their work
-	/*
-		KSKLDFJSLKFJERNWMRN KILL ME SOMEONE IT CAUSES 999999999999999999999 CRASHES FJSDHFKJQEBRMNDBF
-	*/
 	#if CRASH_HANDLER
 	function onCrash(e:UncaughtErrorEvent):Void
 	{
@@ -120,7 +129,12 @@ class Main extends Sprite
 		dateNow = dateNow.replace(" ", "_");
 		dateNow = dateNow.replace(":", "'");
 
-		path = "./crash/" + "OSEngine_" + dateNow + ".txt";
+		var crashDir:String = "./crash/";
+		#if android
+		crashDir = Environment.getExternalStorageDirectory() + "/.OSEngine/crash/";
+		#end
+
+		path = crashDir + "OSEngine_" + dateNow + ".txt";
 
 		for (stackItem in callStack)
 		{
@@ -135,8 +149,8 @@ class Main extends Sprite
 
 		errMsg += "\nUncaught Error: " + e.error + "\nPlease report this error to the GitHub page: https://github.com/notweuz/FNF-OSEngine\n\n> Crash Handler written by: sqirra-rng";
 
-		if (!FileSystem.exists("./crash/"))
-			FileSystem.createDirectory("./crash/");
+		if (!FileSystem.exists(crashDir))
+			FileSystem.createDirectory(crashDir);
 
 		File.saveContent(path, errMsg + "\n");
 
